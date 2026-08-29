@@ -1,0 +1,7 @@
+aureum:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('AUREUM_DUCKDB_PATH', '../data/aureum.duckdb') }}"
+      threads: 4

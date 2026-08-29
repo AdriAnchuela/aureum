@@ -1,0 +1,24 @@
+version: 2
+
+models:
+  - name: mart_daily_macro
+    description: One row per trading day joining gold with rates, USD and VIX.
+    columns:
+      - name: date
+        data_tests: [not_null, unique]
+      - name: gold_usd
+        data_tests: [not_null]
+  - name: mart_geopolitical_daily
+    description: Daily GDELT aggregates (tone, Goldstein, conflict share).
+    columns:
+      - name: event_date
+        data_tests: [not_null, unique]
+  - name: mart_cot_positioning
+    description: Weekly net speculative positioning with 3y z-score.
+    columns:
+      - name: instrument
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["gold", "us_treasury_10y"]

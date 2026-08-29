@@ -1,0 +1,16 @@
+name: aureum
+version: "0.1.0"
+profile: aureum
+
+model-paths: ["models"]
+target-path: target
+
+vars:
+  lake_path: "../lake"
+
+models:
+  aureum:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table

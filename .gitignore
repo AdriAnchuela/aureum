@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Data (never commit the lake or warehouse)
+lake/
+data/
+*.duckdb
+*.duckdb.wal
+
+# dbt
+warehouse/target/
+warehouse/dbt_packages/
+warehouse/logs/
+
+# Env & OS
+.env
+.DS_Store
+
+# Node (dashboard, later phases)
+node_modules/
+.next/
