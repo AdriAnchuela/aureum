@@ -1,0 +1,40 @@
+# AUREUM streaming infrastructure.
+#
+#   docker compose up -d          # broker + console
+#   aureum stream paxg --sink kafka
+#   aureum stream consume --topic aureum.paxg.trades
+#
+# The broker buys buffering, replay and fan-out for the streaming path;
+# every `make` target still works without it (lake sink is the default).
+name: aureum
+
+services:
+  redpanda:
+    image: redpandadata/redpanda:v24.2.4
+    command:
+      - redpanda start
+      - --smp 1
+      - --memory 1G
+      - --mode dev-container
+      - --kafka-addr internal://0.0.0.0:29092,external://0.0.0.0:9092
+      - --advertise-kafka-addr internal://redpanda:29092,external://localhost:9092
+    ports:
+      - "127.0.0.1:9092:9092"
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "health"]
+      interval: 10s
+      retries: 5
+
+  console:
+    image: redpandadata/console:v2.7.2
+    environment:
+      KAFKA_BROKERS: redpanda:29092
+    ports:
+      - "127.0.0.1:8085:8080"
+    depends_on:
+      - redpanda
+
+volumes:
+  redpanda-data:

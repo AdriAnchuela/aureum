@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import dagster as dg
 
-from aureum.ingest import cot, fred, gdelt, prices
+from aureum.ingest import cot, fred, gdelt, polymarket, prices
 
 
 @dg.asset(group_name="batch")
@@ -25,18 +25,23 @@ def cot_positioning() -> dg.MaterializeResult:
     return dg.MaterializeResult(metadata=cot.run())
 
 
+@dg.asset(group_name="batch")
+def polymarket_odds() -> dg.MaterializeResult:
+    return dg.MaterializeResult(metadata=polymarket.run())
+
+
 @dg.asset(group_name="near_real_time")
 def gdelt_events() -> dg.MaterializeResult:
     return dg.MaterializeResult(metadata=gdelt.run())
 
 
 batch_job = dg.define_asset_job(
-    "batch_daily", selection=[prices_daily, fred_series, cot_positioning]
+    "batch_daily", selection=[prices_daily, fred_series, cot_positioning, polymarket_odds]
 )
 gdelt_job = dg.define_asset_job("gdelt_15min", selection=[gdelt_events])
 
 defs = dg.Definitions(
-    assets=[prices_daily, fred_series, cot_positioning, gdelt_events],
+    assets=[prices_daily, fred_series, cot_positioning, polymarket_odds, gdelt_events],
     schedules=[
         dg.ScheduleDefinition(
             job=batch_job, cron_schedule="0 7 * * *", execution_timezone="Europe/Madrid"

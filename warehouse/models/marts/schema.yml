@@ -22,3 +22,15 @@ models:
           - accepted_values:
               arguments:
                 values: ["gold", "us_treasury_10y"]
+  - name: mart_gold_intraday
+    description: 1-minute OHLC bars from the PAXG 24/7 tick stream.
+    columns:
+      - name: minute
+        data_tests: [not_null, unique]
+  - name: mart_event_odds
+    description: Leading outcome and implied probability per macro market.
+    columns:
+      - name: market_id
+        data_tests: [not_null, unique]
+      - name: leading_prob
+        data_tests: [not_null]

@@ -17,6 +17,9 @@ warehouse/target/
 warehouse/dbt_packages/
 warehouse/logs/
 
+# Local tool config
+.claude/
+
 # Env & OS
 .env
 .DS_Store

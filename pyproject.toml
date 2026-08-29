@@ -14,12 +14,15 @@ dependencies = [
     "pandas>=2.1",
     "pyarrow>=15",
     "requests>=2.31",
+    "websockets>=12",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.4"]
 warehouse = ["dbt-duckdb>=1.8"]
 orchestration = ["dagster>=1.7", "dagster-webserver>=1.7"]
+streaming = ["confluent-kafka>=2.3"]
+api = ["fastapi>=0.110", "uvicorn>=0.29", "duckdb>=1.0"]
 
 [project.scripts]
 aureum = "aureum.cli:main"

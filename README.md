@@ -5,7 +5,7 @@
 ![CI](https://github.com/AdriAnchuela/aureum/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Status](https://img.shields.io/badge/status-phase%201%20%C2%B7%20data%20platform-orange)
+![Status](https://img.shields.io/badge/status-phase%202%20%C2%B7%20streaming%20%2B%20dashboard-orange)
 
 ## Why this exists
 
@@ -34,18 +34,18 @@ flowchart LR
     subgraph nearrt["Near-real-time (15 min)"]
         GDELT["GDELT 2.0<br/>global event firehose"]
     end
-    subgraph stream["Streaming (phase 2)"]
+    subgraph stream["Streaming"]
         POLY["Polymarket WS<br/>event odds"]
         PAXG["PAXG WS<br/>tokenised gold, 24/7"]
     end
 
     batch --> ING["Ingestion<br/>(python · idempotent)"]
     nearrt --> ING
-    stream -.-> KAFKA["Redpanda"] -.-> ING
+    stream --> KAFKA["Redpanda<br/>(or direct lake sink)"] --> ING
     ING --> LAKE["Lake<br/>partitioned Parquet"]
     LAKE --> DBT["dbt + DuckDB<br/>staging → marts"]
     DBT --> MARTS["marts<br/>daily macro · geopolitical risk · positioning"]
-    MARTS --> API["API + dashboard<br/>(Next.js, phase 2)"]
+    MARTS --> API["FastAPI + Next.js dashboard"]
     MARTS -.-> ML["regimes · anomalies · event studies<br/>(MLflow, phase 3)"]
     MARTS -.-> AGENT["LLM analyst + morning brief<br/>(evals, phase 4)"]
 
@@ -61,21 +61,30 @@ flowchart LR
 | [FRED](https://fred.stlouisfed.org) | 10y/2y yields, 10y real yield, curve slope, broad USD, VIX | Daily | none¹ | snapshot |
 | [CFTC COT](https://www.cftc.gov) | Futures positioning (gold, 10y Treasury): who is long, who is short | Weekly | none | snapshot |
 | [GDELT 2.0](https://www.gdeltproject.org) | Global news events with tone & conflict scores | 15 min | none | incremental |
-| Polymarket / PAXG | Live odds & tokenised gold ticks | Streaming | none | phase 2 |
+| [Polymarket](https://polymarket.com) | Macro event odds: Gamma REST snapshot + CLOB WebSocket | Daily + streaming | none | snapshot + increment |
+| Binance (PAXG) | Tokenised gold trades, 24/7 — alive when COMEX sleeps | Streaming | none | increment |
 
 ¹ FRED's WAF fingerprints clients and silently drops some of them (documented in the MarketLens
 paper, §5.8); the connector degrades from `requests` to a `curl` subprocess before giving up.
 ² Stooq was the original pick but now serves a JS anti-bot challenge to non-browser clients —
 the kind of thing free sources do, and the reason every connector fails soft and alone.
 
-## What works today (phase 1)
+## What works today
 
 ```bash
 make setup      # venv + install
-make ingest     # pull all four sources into lake/raw/ (parquet)
+make ingest     # pull all five batch sources into lake/raw/ (parquet)
 make warehouse  # dbt build → data/aureum.duckdb (staging views + marts + tests)
 make test       # offline unit tests for every parser
+make broker     # Redpanda + console via docker compose
+make stream     # PAXG + Polymarket WebSockets → micro-batched parquet
+make api        # read-only JSON API over the warehouse (:8000)
+make dashboard  # Next.js terminal-dark dashboard (:3000)
 ```
+
+The streaming path runs with or without the broker: the lake sink is the
+zero-infra default; `--sink kafka` publishes to Redpanda and
+`aureum stream consume` drains topics back into the lake.
 
 Then ask the warehouse something:
 
@@ -89,11 +98,21 @@ FROM mart_daily_macro ORDER BY date DESC LIMIT 10;
 
 - [x] **Phase 1 — Data platform**: batch ingestion (FRED, Stooq, CFTC, GDELT), parquet lake,
       dbt + DuckDB marts, unit-tested parsers, CI, Dagster schedules
-- [ ] **Phase 2 — Streaming**: Polymarket & PAXG WebSockets → Redpanda → lake; Next.js dashboard
+- [x] **Phase 2 — Streaming + dashboard**: Polymarket & PAXG WebSockets → Redpanda → lake;
+      FastAPI over the warehouse; Next.js dashboard (hand-rolled SVG charts, validated palette)
 - [ ] **Phase 3 — ML with MLOps**: geopolitical risk index, risk-on/risk-off regime classifier,
       positioning/price anomaly detection; MLflow registry, scheduled retraining, drift monitoring
 - [ ] **Phase 4 — LLM analyst**: tool-using agent over the warehouse ("why is gold up today?"),
       auto-generated morning brief, eval suite (groundedness, citation accuracy)
+
+## Dashboard
+
+![AUREUM dashboard](docs/dashboard.png)
+
+Dark by design (a financial terminal, not a website), hand-rolled SVG charts —
+2px lines, crosshair + tooltip, direct last-value labels — on a palette
+validated for contrast and color-vision deficiency. One axis per chart, no
+dual-axis tricks, and honest empty states while young streams accumulate.
 
 ## Design decisions & trade-offs
 
